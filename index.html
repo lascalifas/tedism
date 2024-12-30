@@ -67,6 +67,7 @@
             color: #ffffff;
             text-shadow: 2px 2px 5px #000;
             display: none;
+            z-index: 9999;
         }
         .restart, .win-button {
             display: none;
@@ -81,6 +82,7 @@
             border: none;
             cursor: pointer;
             border-radius: 5px;
+            z-index: 9999;
         }
         .win-button {
             background: green;
@@ -209,7 +211,7 @@
 
             gameContainer.appendChild(bull);
 
-            if (Math.random() < 0.3) {
+            if (Math.random() < 0.6) {
                 spawnBullLaser(bull);
             }
 
@@ -264,7 +266,7 @@
                     bullLaser.remove();
                     clearInterval(interval);
                 } else {
-                    bullLaser.style.left = `${currentLeft - 10}px`;
+                    bullLaser.style.left = `${currentLeft - 12}px`;
                 }
             }, 20);
         };
@@ -331,8 +333,8 @@
         const startGame = () => {
             spawnInterval = setInterval(() => {
                 if (gameActive) spawnBull();
-                if (bullSpeed < 9) bullSpeed += 0.2;
-                if (spawnRate > 900) spawnRate -= 12;
+                if (bullSpeed < 13) bullSpeed += 0.3;
+                if (spawnRate > 1100) spawnRate -= 18;
             }, spawnRate);
             animateBearMovement();
         };
