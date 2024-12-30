@@ -270,6 +270,7 @@
         };
 
         const gameOver = () => {
+            if (!gameActive) return;
             gameActive = false;
             clearInterval(spawnInterval);
             gameOverSound.currentTime = 0;
