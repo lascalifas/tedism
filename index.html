@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BearSmash: Bulls Down!</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #FF0000, #8B0000);
+            overflow: hidden;
+        }
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: url('./images/background.jpg') no-repeat center/cover;
+            overflow: hidden;
+            border: 5px solid #8B0000;
+        }
+        .bear {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: url('./images/bear.png') no-repeat center/contain;
+            z-index: 10;
+        }
+        .bull {
+            position: absolute;
+            top: 50%;
+            width: 120px;
+            height: 120px;
+            background: url('./images/bull.png') no-repeat center/contain;
+            z-index: 5;
+        }
+        .tedism {
+            position: absolute;
+            width: 30px;
+            height: 90px;
+            background: url('./images/laser.png') no-repeat center/contain;
+            z-index: 8;
+        }
+        .bull-laser {
+            position: absolute;
+            width: 5px;
+            height: 60px;
+            background: yellow;
+            z-index: 7;
+        }
+        .scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #ffffff;
+            text-shadow: 2px 2px 5px #000;
+        }
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ffffff;
+            text-shadow: 2px 2px 5px #000;
+            display: none;
+        }
+        .restart {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #ffffff;
+            background: #8B0000;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="scoreboard" id="scoreboard">IQ: 100</div>
+        <div class="bear" id="bear"></div>
+        <div class="game-over" id="gameOver">Game Over!</div>
+        <button class="restart" id="restartButton">Restart</button>
+        <audio id="shootSound" src="./sounds/shoot.mp3"></audio>
+        <audio id="bullHitSound" src="./sounds/bull-hit.mp3"></audio>
+        <audio id="gameOverSound" src="./sounds/game-over.mp3"></audio>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const bear = document.getElementById('bear');
+        const scoreboard = document.getElementById('scoreboard');
+        const gameOverText = document.getElementById('gameOver');
+        const restartButton = document.getElementById('restartButton');
+        const shootSound = document.getElementById('shootSound');
+        const bullHitSound = document.getElementById('bullHitSound');
+        const gameOverSound = document.getElementById('gameOverSound');
+        let score = 100;
+
+        let bearX = 20;
+        let bearY = 20;
+        let bullSpeed = 2;
+        const bearSpeed = 10;
+        let spawnRate = 1200;
+        let spawnInterval;
+        let lastShootTime = 0;
+        const shootCooldown = 500;
+
+        let movingUp = false;
+        let movingDown = false;
+        let movingLeft = false;
+        let movingRight = false;
+        let gameActive = true;
+
+        const updateBearPosition = () => {
+            bear.style.left = `${bearX}px`;
+            bear.style.bottom = `${bearY}px`;
+        };
+
+        const animateBearMovement = () => {
+            if (movingUp) {
+                bearY = Math.min(gameContainer.offsetHeight - 150, bearY + bearSpeed);
+            }
+            if (movingDown) {
+                bearY = Math.max(0, bearY - bearSpeed);
+            }
+            if (movingLeft) {
+                bearX = Math.max(0, bearX - bearSpeed);
+            }
+            if (movingRight) {
+                bearX = Math.min(gameContainer.offsetWidth - 150, bearX + bearSpeed);
+            }
+            updateBearPosition();
+            if (gameActive) requestAnimationFrame(animateBearMovement);
+        };
+
+        const shootTedism = () => {
+            const now = Date.now();
+            if (now - lastShootTime < shootCooldown) return;
+            lastShootTime = now;
+
+            shootSound.currentTime = 0;
+            shootSound.play();
+
+            const tedism = document.createElement('div');
+            tedism.classList.add('tedism');
+            tedism.style.left = `${bearX + 140}px`;
+            tedism.style.bottom = `${bearY + 80}px`;
+
+            gameContainer.appendChild(tedism);
+
+            const interval = setInterval(() => {
+                const currentLeft = parseInt(tedism.style.left);
+                if (currentLeft > gameContainer.offsetWidth) {
+                    tedism.remove();
+                    clearInterval(interval);
+                } else {
+                    tedism.style.left = `${currentLeft + 15}px`;
+                }
+
+                document.querySelectorAll('.bull').forEach(bull => {
+                    const bullRect = bull.getBoundingClientRect();
+                    const tedismRect = tedism.getBoundingClientRect();
+
+                    if (
+                        tedismRect.left < bullRect.right &&
+                        tedismRect.right > bullRect.left &&
+                        tedismRect.top < bullRect.bottom &&
+                        tedismRect.bottom > bullRect.top
+                    ) {
+                        bullHitSound.currentTime = 0;
+                        bullHitSound.play();
+                        bull.remove();
+                        tedism.remove();
+                        clearInterval(interval);
+                        score -= 10;
+                        scoreboard.textContent = `IQ: ${score}`;
+                    }
+                });
+            }, 20);
+        };
+
+        const spawnBull = () => {
+            const bull = document.createElement('div');
+            bull.classList.add('bull');
+            bull.style.left = `${gameContainer.offsetWidth}px`;
+            bull.style.top = `${Math.random() * (gameContainer.offsetHeight - 100)}px`;
+
+            gameContainer.appendChild(bull);
+
+            if (Math.random() < 0.3) {
+                spawnBullLaser(bull);
+            }
+
+            const moveInterval = setInterval(() => {
+                const currentLeft = parseInt(bull.style.left);
+                const bearRightEdge = bearX + bear.offsetWidth;
+                const bullRect = bull.getBoundingClientRect();
+                const bearRect = bear.getBoundingClientRect();
+
+                if (
+                    bullRect.left < bearRect.right &&
+                    bullRect.right > bearRect.left &&
+                    bullRect.top < bearRect.bottom &&
+                    bullRect.bottom > bearRect.top
+                ) {
+                    gameOver();
+                    clearInterval(moveInterval);
+                } else if (currentLeft + bull.offsetWidth < 0) {
+                    bull.remove();
+                    clearInterval(moveInterval);
+                    score += 5;
+                    scoreboard.textContent = `IQ: ${score}`;
+                } else {
+                    bull.style.left = `${currentLeft - bullSpeed}px`;
+                }
+            }, 20);
+        };
+
+        const spawnBullLaser = (bull) => {
+            const bullLaser = document.createElement('div');
+            bullLaser.classList.add('bull-laser');
+            const bullRect = bull.getBoundingClientRect();
+            bullLaser.style.left = `${bullRect.left}px`;
+            bullLaser.style.top = `${bullRect.top + bull.offsetHeight / 2}px`;
+
+            gameContainer.appendChild(bullLaser);
+
+            const interval = setInterval(() => {
+                const currentLeft = parseInt(bullLaser.style.left);
+                const bearRect = bear.getBoundingClientRect();
+                const laserRect = bullLaser.getBoundingClientRect();
+
+                if (
+                    laserRect.left < bearRect.right &&
+                    laserRect.right > bearRect.left &&
+                    laserRect.top < bearRect.bottom &&
+                    laserRect.bottom > bearRect.top
+                ) {
+                    gameOver();
+                    clearInterval(interval);
+                } else if (currentLeft < 0) {
+                    bullLaser.remove();
+                    clearInterval(interval);
+                } else {
+                    bullLaser.style.left = `${currentLeft - 10}px`;
+                }
+            }, 20);
+        };
+
+        const gameOver = () => {
+            gameActive = false;
+            clearInterval(spawnInterval);
+            gameOverSound.currentTime = 0;
+            gameOverSound.play();
+            gameOverText.style.display = 'block';
+            restartButton.style.display = 'block';
+            bullSpeed = 2;
+            spawnRate = 1200;
+        };
+
+        const restartGame = () => {
+            gameActive = true;
+            score = 100;
+            bullSpeed = 2;
+            spawnRate = 1200;
+            scoreboard.textContent = `IQ: ${score}`;
+            gameOverText.style.display = 'none';
+            restartButton.style.display = 'none';
+            gameContainer.querySelectorAll('.bull').forEach(bull => bull.remove());
+            gameContainer.querySelectorAll('.bull-laser').forEach(laser => laser.remove());
+            startGame();
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'ArrowUp' || event.key === 'w') movingUp = true;
+            if (event.key === 'ArrowDown' || event.key === 's') movingDown = true;
+            if (event.key === 'ArrowLeft' || event.key === 'a') movingLeft = true;
+            if (event.key === 'ArrowRight' || event.key === 'd') movingRight = true;
+            if (event.key === ' ') shootTedism();
+        };
+
+        const handleKeyUp = (event) => {
+            if (event.key === 'ArrowUp' || event.key === 'w') movingUp = false;
+            if (event.key === 'ArrowDown' || event.key === 's') movingDown = false;
+            if (event.key === 'ArrowLeft' || event.key === 'a') movingLeft = false;
+            if (event.key === 'ArrowRight' || event.key === 'd') movingRight = false;
+        };
+
+        restartButton.addEventListener('click', restartGame);
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+
+        const startGame = () => {
+            spawnInterval = setInterval(() => {
+                if (gameActive) spawnBull();
+                if (bullSpeed < 9) bullSpeed += 0.2;
+                if (spawnRate > 900) spawnRate -= 12;
+            }, spawnRate);
+            animateBearMovement();
+        };
+
+        updateBearPosition();
+        startGame();
+    </script>
+</body>
+</html>
