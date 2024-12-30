@@ -58,7 +58,7 @@
             color: #ffffff;
             text-shadow: 2px 2px 5px #000;
         }
-        .game-over {
+        .game-over, .game-win {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -68,7 +68,7 @@
             text-shadow: 2px 2px 5px #000;
             display: none;
         }
-        .restart {
+        .restart, .win-button {
             display: none;
             position: absolute;
             top: 60%;
@@ -82,6 +82,9 @@
             cursor: pointer;
             border-radius: 5px;
         }
+        .win-button {
+            background: green;
+        }
     </style>
 </head>
 <body>
@@ -89,10 +92,13 @@
         <div class="scoreboard" id="scoreboard">IQ: 100</div>
         <div class="bear" id="bear"></div>
         <div class="game-over" id="gameOver">Game Over!</div>
+        <div class="game-win" id="gameWin">You Win!</div>
         <button class="restart" id="restartButton">Restart</button>
+        <button class="win-button" id="winButton">Get Steady Teddys WL</button>
         <audio id="shootSound" src="./sounds/shoot.mp3"></audio>
         <audio id="bullHitSound" src="./sounds/bull-hit.mp3"></audio>
         <audio id="gameOverSound" src="./sounds/game-over.mp3"></audio>
+        <audio id="winSound" src="./sounds/win.mp3"></audio>
     </div>
 
     <script>
@@ -100,10 +106,13 @@
         const bear = document.getElementById('bear');
         const scoreboard = document.getElementById('scoreboard');
         const gameOverText = document.getElementById('gameOver');
+        const gameWinText = document.getElementById('gameWin');
         const restartButton = document.getElementById('restartButton');
+        const winButton = document.getElementById('winButton');
         const shootSound = document.getElementById('shootSound');
         const bullHitSound = document.getElementById('bullHitSound');
         const gameOverSound = document.getElementById('gameOverSound');
+        const winSound = document.getElementById('winSound');
         let score = 100;
 
         let bearX = 20;
@@ -184,6 +193,9 @@
                         clearInterval(interval);
                         score -= 10;
                         scoreboard.textContent = `IQ: ${score}`;
+                        if (score <= -30) {
+                            gameWin();
+                        }
                     }
                 });
             }, 20);
@@ -268,6 +280,15 @@
             spawnRate = 1200;
         };
 
+        const gameWin = () => {
+            gameActive = false;
+            clearInterval(spawnInterval);
+            winSound.currentTime = 0;
+            winSound.play();
+            gameWinText.style.display = 'block';
+            winButton.style.display = 'block';
+        };
+
         const restartGame = () => {
             gameActive = true;
             score = 100;
@@ -275,11 +296,17 @@
             spawnRate = 1200;
             scoreboard.textContent = `IQ: ${score}`;
             gameOverText.style.display = 'none';
+            gameWinText.style.display = 'none';
             restartButton.style.display = 'none';
+            winButton.style.display = 'none';
             gameContainer.querySelectorAll('.bull').forEach(bull => bull.remove());
             gameContainer.querySelectorAll('.bull-laser').forEach(laser => laser.remove());
             startGame();
         };
+
+        winButton.addEventListener('click', () => {
+            window.location.href = 'https://careers.mcdonalds.com/';
+        });
 
         const handleKeyDown = (event) => {
             if (event.key === 'ArrowUp' || event.key === 'w') movingUp = true;
